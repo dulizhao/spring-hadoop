@@ -15,6 +15,7 @@
  */
 package org.springframework.data.hadoop.mapreduce;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -39,7 +40,6 @@ import org.springframework.util.StringUtils;
  * Common class shared for executing Hadoop {@link Job}s.
  * 
  * @author Costin Leau
- * @author Thomas Risberg
  */
 abstract class JobExecutor implements InitializingBean, DisposableBean, BeanFactoryAware {
 
@@ -140,13 +140,9 @@ abstract class JobExecutor implements InitializingBean, DisposableBean, BeanFact
 									listener.jobKilled(job);
 								}
 							}
-						} catch (Exception ex) {
+						} catch (IOException ex) {
 							log.warn("Cannot kill job [" + job.getJobName() + "]", ex);
-							if (RuntimeException.class.isAssignableFrom(ex.getClass())) {
-								throw (RuntimeException)ex;
-							} else {
-								throw new IllegalStateException(ex);
-							}
+							throw new IllegalStateException(ex);
 						}
 					}
 				} finally {

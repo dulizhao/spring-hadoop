@@ -122,7 +122,7 @@ abstract class PigUtils {
 				} catch (IOException ex) {
 					throw new IllegalArgumentException("Cannot open script [" + script.getResource() + "]", ex);
 				}
-				
+
 				// register the script (with fallback for old Pig versions)
 				registerScript(pig, in, script.getArguments());
 				jobs.addAll(pig.executeBatch());

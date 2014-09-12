@@ -195,7 +195,7 @@ abstract class HiveUtils {
 		InputStream stream;
 		try {
 			stream = script.getResource().getInputStream();
-			reader = new BufferedReader(new InputStreamReader(stream));
+			reader = new BufferedReader(new InputStreamReader(stream, "UTF-8"));
 		} catch (Exception ex) {
 			throw new IllegalArgumentException("Cannot open script [" + script.getResource() + "]", ex);
 		}

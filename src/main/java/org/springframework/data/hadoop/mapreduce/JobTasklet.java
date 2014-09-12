@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2013 the original author or authors.
+ * Copyright 2011 the original author or authors.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,11 @@
  */
 package org.springframework.data.hadoop.mapreduce;
 
-import java.util.Iterator;
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.springframework.batch.core.StepContribution;
@@ -29,7 +28,6 @@ import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.scope.context.StepContext;
 import org.springframework.batch.core.scope.context.StepSynchronizationManager;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.repeat.RepeatStatus;
 
 /**
@@ -37,7 +35,6 @@ import org.springframework.batch.repeat.RepeatStatus;
  * Can be configured to not wait for the job to finish - by default the tasklet waits for the job submitted to finish.
  * 
  * @author Costin Leau
- * @author Thomas Risberg
  */
 public class JobTasklet extends JobExecutor implements Tasklet {
 
@@ -75,13 +72,11 @@ public class JobTasklet extends JobExecutor implements Tasklet {
 			@Override
 			public void jobKilled(Job job) {
 				saveCounters(job, contribution);
-				saveJobStats(job, stepExecution);
 			}
 
 			@Override
 			public void jobFinished(Job job) {
 				saveCounters(job, contribution);
-				saveJobStats(job, stepExecution);
 			}
 		};
 
@@ -117,12 +112,8 @@ public class JobTasklet extends JobExecutor implements Tasklet {
 		Counters counters = null;
 		try {
 			counters = job.getCounters();
-		} catch (Exception ex) {
-			if (RuntimeException.class.isAssignableFrom(ex.getClass())) {
-				throw (RuntimeException)ex;
-			} else {
-				// ignore - we just can't get stats
-			}
+		} catch (IOException ex) {
+			// ignore - we just can't get stats
 		}
 		if (counters == null) {
 			return;
@@ -145,28 +136,6 @@ public class JobTasklet extends JobExecutor implements Tasklet {
 		for (int i = 0; i < safeLongToInt(count.getValue()); i++) {
 			contribution.incrementWriteSkipCount();
 		}
-	}
-
-	private static void saveJobStats(Job job, StepExecution stepExecution) {
-		if (stepExecution == null) {
-			return;
-		}
-		ExecutionContext executionContext = stepExecution.getExecutionContext();
-		String statusPrefix = "Job Status::";
-		executionContext.put(statusPrefix + "ID", JobUtils.getJobId(job).toString());
-		executionContext.put(statusPrefix + "Name", job.getJobName());
-		executionContext.put(statusPrefix + "Tracking URL", job.getTrackingURL());
-		executionContext.put(statusPrefix + "State", JobUtils.getStatus(job).toString());
-		try {
-			for (String cgName : job.getCounters().getGroupNames()) {
-				CounterGroup group = job.getCounters().getGroup(cgName);
-				Iterator<Counter> ci = group.iterator();
-				while (ci.hasNext()) {
-					Counter c = ci.next();
-					executionContext.put(group.getDisplayName().trim() + "::" + c.getDisplayName().trim(), c.getValue());
-				}
-			}
-		} catch (Exception ignore) {}
 	}
 
 	static int safeLongToInt(long l) {
